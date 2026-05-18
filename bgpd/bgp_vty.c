@@ -1593,7 +1593,7 @@ static int peer_flag_unset_vty(struct vty *vty, const char *ip_str,
 
 /*
  * True if `arg` parses as an IP address (v4/v6), false otherwise
- * (assume peer-group name). Used to decide whether a DEFPY_YANG body
+ * (assume peer-group name). Used to decide whether a DEFUN body
  * should enqueue an NB change against the
  * `neighbors/neighbor[remote-address]` xpath. Peer-group writes are
  * currently not mirrored to the YANG datastore.
@@ -1628,7 +1628,7 @@ static int bgp_nb_peer_flag_dual(struct vty *vty, const char *peer_arg,
 	if (ret != CMD_SUCCESS || !bgp_arg_is_ip_peer(peer_arg))
 		return ret;
 
-	bgp = (struct bgp *)vty->index;
+	bgp = VTY_GET_CONTEXT(bgp);
 	if (!bgp)
 		bgp = bgp_get_default();
 	if (!bgp)
@@ -1658,7 +1658,7 @@ static void bgp_nb_peer_value_dual(struct vty *vty, const char *peer_arg,
 
 	if (!bgp_arg_is_ip_peer(peer_arg))
 		return;
-	bgp = (struct bgp *)vty->index;
+	bgp = VTY_GET_CONTEXT(bgp);
 	if (!bgp)
 		bgp = bgp_get_default();
 	if (!bgp)
@@ -1708,7 +1708,7 @@ static void bgp_nb_peer_af_flag_dual(struct vty *vty, const char *peer_arg,
 
 	if (!bgp_arg_is_ip_peer(peer_arg))
 		return;
-	bgp = (struct bgp *)vty->index;
+	bgp = VTY_GET_CONTEXT(bgp);
 	if (!bgp)
 		return;
 	af_name = bgp_nb_af_yang_name(afi, safi);
@@ -1741,7 +1741,7 @@ static void bgp_nb_peer_af_value_dual(struct vty *vty, const char *peer_arg,
 
 	if (!bgp_arg_is_ip_peer(peer_arg))
 		return;
-	bgp = (struct bgp *)vty->index;
+	bgp = VTY_GET_CONTEXT(bgp);
 	if (!bgp)
 		return;
 	af_name = bgp_nb_af_yang_name(afi, safi);
@@ -3300,7 +3300,7 @@ DEFPY_YANG (bgp_timers, bgp_timers_cmd,
 }
 
 DEFPY_YANG (no_bgp_timers, no_bgp_timers_cmd,
-	    "no timers bgp [(0-65535) (0-65535)]",
+	    "no timers bgp [(0-65535)$keepalive (0-65535)$holdtime]",
 	    NO_STR
 	    "Adjust routing timers\n"
 	    "BGP timers\n"
@@ -5558,7 +5558,7 @@ static void bgp_may_stop_listening(struct bgp *bgp, struct vty *vty)
 
 DEFPY_YANG (bgp_listen_range,
        bgp_listen_range_cmd,
-       "bgp listen range <A.B.C.D/M|X:X::X:X/M> peer-group PGNAME",
+       "bgp listen range <A.B.C.D/M|X:X::X:X/M>$pfx peer-group PGNAME$pgname",
        BGP_STR
        "Configure BGP dynamic neighbors listen range\n"
        "Configure BGP dynamic neighbors listen range\n"
@@ -5631,7 +5631,7 @@ DEFPY_YANG (bgp_listen_range,
 
 DEFPY_YANG (no_bgp_listen_range,
        no_bgp_listen_range_cmd,
-       "no bgp listen range <A.B.C.D/M|X:X::X:X/M> peer-group PGNAME",
+       "no bgp listen range <A.B.C.D/M|X:X::X:X/M>$pfx peer-group PGNAME$pgname",
        NO_STR
        BGP_STR
        "Unconfigure BGP dynamic neighbors listen range\n"
@@ -5929,7 +5929,7 @@ DEFPY_YANG (neighbor_remote_as,
 				"./neighbor-remote-as/remote-as",
 				NB_OP_DESTROY, NULL);
 		{
-			struct bgp *bgp = (struct bgp *)vty->index;
+			struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 			if (bgp)
 				(void)nb_cli_apply_changes(vty,
 					BGP_NEIGHBOR_XPATH, "frr-bgp:bgp",
@@ -6428,7 +6428,7 @@ static void bgp_nb_enqueue_local_as(struct vty *vty, const char *peer,
 
 	if (!bgp_arg_is_ip_peer(peer))
 		return;
-	bgp = (struct bgp *)vty->index;
+	bgp = VTY_GET_CONTEXT(bgp);
 	if (!bgp)
 		return;
 	nb_cli_enqueue_change(vty, "./local-as/local-as", NB_OP_MODIFY, asnum);
@@ -6542,7 +6542,7 @@ DEFPY_YANG (no_neighbor_local_as,
 		return CMD_WARNING_CONFIG_FAILED;
 	ret = peer_local_as_unset(p);
 	if (ret == 0 && bgp_arg_is_ip_peer(peer)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			nb_cli_enqueue_change(vty, "./local-as", NB_OP_DESTROY,
 					      NULL);
@@ -6783,7 +6783,7 @@ DEFPY_YANG (no_neighbor_set_peer_group,
 		/* Removing peer from group via "no neighbor X peer-group"
 		 * actually deletes the peer entirely (legacy semantic). Mirror
 		 * by destroying the whole neighbor list entry in NB. */
-		struct bgp *b = (struct bgp *)vty->index;
+		struct bgp *b = VTY_GET_CONTEXT(bgp);
 		if (b) {
 			(void)nb_cli_apply_changes(vty,
 				BGP_NEIGHBORS_XPATH
@@ -6917,7 +6917,7 @@ DEFPY_YANG(neighbor_shutdown_rtt,
 		p->rtt_keepalive_conf = ct;
 	ret = peer_flag_set_vty(vty, peer, PEER_FLAG_RTT_SHUTDOWN);
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(peer)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			snprintf(rbuf, sizeof(rbuf), "%ld", rtt);
 			nb_cli_enqueue_change(vty, "./shutdown-rtt/rtt",
@@ -7009,7 +7009,7 @@ DEFPY_YANG (neighbor_dont_capability_negotiate,
 
 	if (ret != CMD_SUCCESS || !bgp_arg_is_ip_peer(peer))
 		return ret;
-	bgp = (struct bgp *)vty->index;
+	bgp = VTY_GET_CONTEXT(bgp);
 	if (!bgp)
 		return ret;
 	nb_cli_enqueue_change(vty, "./capability-options/capability-negotiate",
@@ -7033,7 +7033,7 @@ DEFPY_YANG (no_neighbor_dont_capability_negotiate,
 
 	if (ret != CMD_SUCCESS || !bgp_arg_is_ip_peer(peer))
 		return ret;
-	bgp = (struct bgp *)vty->index;
+	bgp = VTY_GET_CONTEXT(bgp);
 	if (!bgp)
 		return ret;
 	nb_cli_enqueue_change(vty, "./capability-options/capability-negotiate",
@@ -7122,7 +7122,7 @@ DEFPY_YANG (neighbor_capability_enhe,
 						   CAPABILITY_ACTION_SET);
 
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(peer)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			nb_cli_enqueue_change(vty,
 				"./capability-options/extended-nexthop-capability",
@@ -7165,7 +7165,7 @@ DEFPY_YANG (no_neighbor_capability_enhe,
 	ret = peer_flag_unset_vty(vty, peer, PEER_FLAG_CAPABILITY_ENHE);
 
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(peer)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			nb_cli_enqueue_change(vty,
 				"./capability-options/extended-nexthop-capability",
@@ -7210,7 +7210,7 @@ DEFPY_YANG(neighbor_capability_software_version,
 			       : CAPABILITY_ACTION_SET);
 
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(neighbor)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			const char *xp = latest_encoding
 				? "./capability-software-version-latest-encoding"
@@ -8514,7 +8514,7 @@ DEFPY_YANG(neighbor_role,
 			    CAPABILITY_CODE_ROLE, CAPABILITY_ACTION_SET);
 
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(neighbor)) {
-		bgp = (struct bgp *)vty->index;
+		bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			nb_cli_enqueue_change(vty, "./local-role/role",
 					      NB_OP_MODIFY, role);
@@ -8553,7 +8553,7 @@ DEFPY_YANG(neighbor_role_strict,
 			    CAPABILITY_CODE_ROLE, CAPABILITY_ACTION_SET);
 
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(neighbor)) {
-		bgp = (struct bgp *)vty->index;
+		bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			nb_cli_enqueue_change(vty, "./local-role/role",
 					      NB_OP_MODIFY, role);
@@ -8592,7 +8592,7 @@ DEFPY_YANG(no_neighbor_role,
 			    CAPABILITY_CODE_ROLE, CAPABILITY_ACTION_UNSET);
 
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(neighbor)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			nb_cli_enqueue_change(vty, "./local-role",
 					      NB_OP_DESTROY, NULL);
@@ -9225,7 +9225,7 @@ DEFPY_YANG (neighbor_timers,
 
 	ret = peer_timers_set_vty(vty, peer, keep_str, hold_str);
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(peer)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			snprintf(kbuf, sizeof(kbuf), "%ld", keep);
 			snprintf(hbuf, sizeof(hbuf), "%ld", hold);
@@ -9254,7 +9254,7 @@ DEFPY_YANG (no_neighbor_timers,
 {
 	int ret = peer_timers_unset_vty(vty, peer);
 	if (ret == CMD_SUCCESS && bgp_arg_is_ip_peer(peer)) {
-		struct bgp *bgp = (struct bgp *)vty->index;
+		struct bgp *bgp = VTY_GET_CONTEXT(bgp);
 		if (bgp) {
 			nb_cli_enqueue_change(vty, "./timers", NB_OP_DESTROY,
 					      NULL);
